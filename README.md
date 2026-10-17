@@ -7,7 +7,7 @@ and latest dates, blocked dates, weekends and a maximum length.
 It's the booking calendar from our Asset Booking app, rebuilt as a reusable component so
 other teams can use it.
 
-**[Live demo and walkthrough →](https://GITHUB-USER.github.io/powerapps-range-calendar/)**
+**[Live demo and walkthrough →](https://asdrenebagj.github.io/powerapps-range-calendar/)**
 
 ## Get it
 
@@ -86,7 +86,7 @@ dates won't match.
 - **No experimental features.** Output properties recalculate by themselves, so there's no need for a custom
   `OnChange` event property (still experimental in Power Apps). Reset uses the built-in `OnReset`.
 
-The [demo page](https://GITHUB-USER.github.io/powerapps-range-calendar/) explains each formula
+The [demo page](https://asdrenbegaj.github.io/powerapps-range-calendar/) explains each formula
 and runs the same logic in the browser.
 
 ## Repository layout
