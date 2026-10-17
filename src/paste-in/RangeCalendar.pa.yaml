@@ -1,0 +1,221 @@
+# Range calendar for Power Apps canvas apps
+# Paste into Power Apps Studio: copy this whole file, right-click a screen in the
+# Tree view and choose "Paste". No data sources, collections or timers needed.
+#
+# State lives in three variables:
+#   varMonth  first day of the month on show
+#   varStart  first selected day (blank = nothing selected)
+#   varEnd    last selected day  (blank = start picked, end not yet)
+#
+# If Studio reports an unknown control version, change the @x.y.z suffix to the
+# version your Studio offers (paste a button/label/gallery and copy it to see it).
+
+- conRangeCalendar:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      Width: =364
+      Height: =430
+      Fill: =RGBA(255, 255, 255, 1)
+      BorderColor: =RGBA(216, 221, 224, 1)
+      BorderThickness: =1
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - btnPrevMonth:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="‹"
+            X: =8
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =RGBA(0, 94, 184, 1)
+            HoverFill: =RGBA(232, 241, 251, 1)
+            BorderThickness: =0
+            AccessibleLabel: ="Previous month"
+            OnSelect: |-
+              =Set(
+                  varMonth,
+                  DateAdd(Coalesce(varMonth, Date(Year(Today()), Month(Today()), 1)), -1, TimeUnit.Months)
+              )
+      - lblMonth:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Text(Coalesce(varMonth, Date(Year(Today()), Month(Today()), 1)), "mmmm yyyy")
+            X: =56
+            Y: =8
+            Width: =252
+            Height: =40
+            Align: =Align.Center
+            FontWeight: =FontWeight.Semibold
+            Size: =15
+            Color: =RGBA(33, 43, 50, 1)
+      - btnNextMonth:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="›"
+            X: =316
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =RGBA(0, 94, 184, 1)
+            HoverFill: =RGBA(232, 241, 251, 1)
+            BorderThickness: =0
+            AccessibleLabel: ="Next month"
+            OnSelect: |-
+              =Set(
+                  varMonth,
+                  DateAdd(Coalesce(varMonth, Date(Year(Today()), Month(Today()), 1)), 1, TimeUnit.Months)
+              )
+      - galWeekdays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: =["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            X: =8
+            Y: =54
+            Width: =348
+            Height: =28
+            WrapCount: =7
+            TemplateSize: =28
+            TemplatePadding: =0
+            ShowScrollbar: =false
+          Children:
+            - lblWeekday:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Value
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Align: =Align.Center
+                  Size: =10
+                  FontWeight: =FontWeight.Semibold
+                  Color: =RGBA(76, 99, 112, 1)
+      - galDays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {
+                      first: Coalesce(varMonth, Date(Year(Today()), Month(Today()), 1))
+                  },
+                  With(
+                      // How many days to step back so the grid starts on a Monday
+                      { offset: Weekday(first, StartOfWeek.Monday) - 1 },
+                      // 6 weeks x 7 days = 42 cells covers every possible month
+                      ForAll(
+                          Sequence(42, 0) As n,
+                          With(
+                              { d: DateAdd(first, n.Value - offset, TimeUnit.Days) },
+                              {
+                                  CalDate: d,
+                                  InMonth: Month(d) = Month(first),
+                                  IsToday: d = Today(),
+                                  IsPast: d < Today()
+                              }
+                          )
+                      )
+                  )
+              )
+            X: =8
+            Y: =84
+            Width: =348
+            Height: =288
+            WrapCount: =7
+            TemplateSize: =48
+            TemplatePadding: =1
+            ShowScrollbar: =false
+          Children:
+            - btnDay:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =Day(ThisItem.CalDate)
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Size: =12
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  AccessibleLabel: =Text(ThisItem.CalDate, "dddd d mmmm yyyy")
+                  DisplayMode: =If(ThisItem.IsPast, DisplayMode.Disabled, DisplayMode.Edit)
+                  # Today gets a ring, whatever else is going on
+                  BorderThickness: =If(ThisItem.IsToday, 2, 0)
+                  BorderColor: =RGBA(0, 94, 184, 1)
+                  Fill: |-
+                    =With(
+                        { s: varStart, e: Coalesce(varEnd, varStart), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) && (d = s || d = e), RGBA(0, 94, 184, 1),   // start / end
+                            !IsBlank(s) && d > s && d < e, RGBA(232, 241, 251, 1),  // in between
+                            RGBA(0, 0, 0, 0)
+                        )
+                    )
+                  HoverFill: =RGBA(208, 226, 245, 1)
+                  PressedFill: =RGBA(0, 72, 141, 1)
+                  DisabledFill: =RGBA(0, 0, 0, 0)
+                  Color: |-
+                    =With(
+                        { s: varStart, e: Coalesce(varEnd, varStart), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) && (d = s || d = e), RGBA(255, 255, 255, 1),
+                            !ThisItem.InMonth, RGBA(174, 183, 189, 1),
+                            RGBA(33, 43, 50, 1)
+                        )
+                    )
+                  DisabledColor: =RGBA(200, 206, 210, 1)
+                  FontWeight: =If(ThisItem.IsToday, FontWeight.Bold, FontWeight.Normal)
+                  # The whole selection logic. Click 1 sets the start, click 2 sets
+                  # the end. Clicking before the start, or after a range is complete,
+                  # starts again. Clicking the start twice gives a single day.
+                  OnSelect: |-
+                    =If(
+                        IsBlank(varStart) || !IsBlank(varEnd) || ThisItem.CalDate < varStart,
+                        Set(varStart, ThisItem.CalDate); Set(varEnd, Blank()),
+                        Set(varEnd, ThisItem.CalDate)
+                    )
+      - lblSelection:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(
+                  IsBlank(varStart),
+                  "Select a start date",
+                  With(
+                      { e: Coalesce(varEnd, varStart), n: DateDiff(varStart, Coalesce(varEnd, varStart), TimeUnit.Days) + 1 },
+                      Text(varStart, "ddd d mmm") &
+                      If(e <> varStart, " – " & Text(e, "ddd d mmm"), "") &
+                      "  ·  " & n & If(n = 1, " day", " days") &
+                      If(IsBlank(varEnd), "  (pick an end date or keep one day)", "")
+                  )
+              )
+            X: =12
+            Y: =380
+            Width: =268
+            Height: =40
+            Size: =11
+            Color: =RGBA(33, 43, 50, 1)
+      - btnClearDates:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="Clear"
+            X: =288
+            Y: =384
+            Width: =64
+            Height: =32
+            Size: =11
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =RGBA(0, 94, 184, 1)
+            BorderColor: =RGBA(0, 94, 184, 1)
+            BorderThickness: =1
+            HoverFill: =RGBA(232, 241, 251, 1)
+            DisplayMode: =If(IsBlank(varStart), DisplayMode.Disabled, DisplayMode.Edit)
+            OnSelect: =Set(varStart, Blank()); Set(varEnd, Blank())

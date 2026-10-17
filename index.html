@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Range Calendar for Power Apps</title>
+<meta name="description" content="A date-range calendar component for Power Apps canvas apps: today marker, single day or range selection, blocked dates and booking rules. Live demo, solution download and source.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f8; --surface:#fff; --ink:#212b32; --muted:#4c6370; --faint:#aeb7bd;
+  --line:#d8dde0; --accent:#005eb8; --accent-ink:#fff; --accent-soft:#e8f1fb; --accent-hover:#d0e2f5;
+  --code-bg:#0f1b26; --code-ink:#dbe7f1; --code-cmt:#7f97aa; --code-key:#7cc4ff; --code-str:#b5e48c; --code-line:#23394c;
+  --warn:#8a5a00; --warn-bg:#fff4dc; --accent-text:#005eb8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e141a; --surface:#16202a; --ink:#e6edf2; --muted:#9fb2c0; --faint:#56687a;
+    --line:#2a3846; --accent-soft:#16324f; --accent-hover:#1d4268; --code-bg:#0a1118;
+    --warn:#ffd27a; --warn-bg:#3a2c0c; --accent-text:#7cc4ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --surface:#16202a; --ink:#e6edf2; --muted:#9fb2c0; --faint:#56687a;
+  --line:#2a3846; --accent-soft:#16324f; --accent-hover:#1d4268; --code-bg:#0a1118;
+  --warn:#ffd27a; --warn-bg:#3a2c0c; --accent-text:#7cc4ff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-text)}
+code,pre{font-family:"JetBrains Mono",ui-monospace,monospace}
+:not(pre)>code{background:var(--accent-soft);padding:.1em .35em;border-radius:4px;font-size:.86em;word-break:break-word}
+.wrap{max-width:1140px;margin:0 auto;padding:0 16px}
+
+header.top{border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:5}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}
+nav a{color:var(--muted);text-decoration:none;font-size:.9rem;margin-left:18px}
+nav a:hover{color:var(--accent-text)}
+@media (max-width:760px){nav{display:none}}
+
+.hero{padding:48px 0 24px}
+.eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text)}
+h1{font-size:clamp(2rem,4.4vw,2.8rem);line-height:1.1;letter-spacing:-.025em;margin:.3em 0 .35em;max-width:20em}
+.lede{font-size:1.1rem;color:var(--muted);max-width:42em;margin:0}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:10px 16px;font:600 .93rem Inter,sans-serif;text-decoration:none;border:1px solid var(--accent-text);cursor:pointer;color:var(--accent-text)}
+.btn.primary{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn:hover{filter:brightness(1.08)}
+
+/* ---- Playground ---- */
+.play{display:grid;grid-template-columns:minmax(0,1fr) 380px minmax(0,1fr);gap:20px;align-items:start;margin:34px 0 20px}
+@media (max-width:1060px){.play{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.play .calcol{grid-column:1/-1;order:-1;justify-self:center;width:100%;max-width:400px}}
+@media (max-width:640px){.play{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.panel h3{margin:0 0 2px;font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.panel .sub{margin:0 0 10px;font-size:.82rem;color:var(--muted)}
+.prop{padding:9px 0;border-top:1px solid var(--line)}
+.prop:first-of-type{border-top:0}
+.prop .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.prop .name{font:500 .85rem "JetBrains Mono",monospace}
+.prop .val{display:block;margin-top:4px;font:.74rem/1.4 "JetBrains Mono",monospace;color:var(--muted);word-break:break-word}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:.15s}
+.switch span::after{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(16px)}
+.switch input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
+select{font:500 .82rem Inter,sans-serif;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.swatches{display:flex;gap:6px}
+.swatches button{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.swatches button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
+
+.cal{background:#fff;color:#212b32;border:1px solid #d8dde0;border-radius:12px;padding:10px;box-shadow:0 10px 30px -18px rgba(0,30,60,.4);user-select:none}
+.cal-head{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;height:44px}
+.cal-head h2{margin:0;text-align:center;font-size:1rem;font-weight:600}
+.navbtn{width:40px;height:40px;border:0;border-radius:8px;background:transparent;color:var(--ac);font-size:1.4rem;cursor:pointer}
+.navbtn:hover{background:var(--ac-soft)}
+.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.wd{text-align:center;font-size:.72rem;font-weight:600;color:#4c6370;padding:6px 0}
+.day{aspect-ratio:1/1;border:0;border-radius:7px;background:transparent;color:#212b32;font:500 .9rem Inter,sans-serif;cursor:pointer}
+.day:hover:not(:disabled){background:var(--ac-hover)}
+.day.out{color:#aeb7bd}
+.day:disabled{color:#c8ced2;cursor:not-allowed}
+.day.blocked:disabled{text-decoration:line-through}
+.day.today{box-shadow:inset 0 0 0 2px var(--ac);font-weight:700}
+.day.mid{background:var(--ac-soft)}
+.day.end{background:var(--ac);color:#fff}
+.day:focus-visible{outline:2px solid #212b32;outline-offset:1px}
+.cal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 4px 2px;min-height:48px}
+.cal-foot p{margin:0;font-size:.85rem}
+.cal-foot p span{color:#4c6370}
+.clear{border:1px solid var(--ac);background:transparent;color:var(--ac);border-radius:6px;padding:5px 12px;font:600 .8rem Inter,sans-serif;cursor:pointer}
+.clear:disabled{opacity:.35;cursor:default}
+.calcap{text-align:center;font-size:.8rem;color:var(--muted);margin:8px 0 0}
+
+.outp{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:14px 16px;font:.8rem/1.75 "JetBrains Mono",monospace}
+.outp h3{font:600 .72rem Inter,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:var(--code-cmt);margin:0 0 4px}
+.outp .grp+.grp{margin-top:12px;padding-top:10px;border-top:1px solid var(--code-line)}
+.outp .k{color:var(--code-key)}
+.outp .v{color:var(--code-str)}
+.outp .blank{color:var(--code-cmt)}
+.outp .why{margin-top:12px;padding-top:10px;border-top:1px solid var(--code-line);color:var(--code-cmt);font-family:Inter,sans-serif;font-size:.84rem;line-height:1.5}
+.outp .why b{color:var(--code-ink);font-weight:600}
+.flash{animation:flash .6s}
+@keyframes flash{from{background:#2e5a83}to{background:transparent}}
+
+/* ---- Sections ---- */
+section{padding:44px 0;border-top:1px solid var(--line)}
+h2.sec{font-size:1.6rem;letter-spacing:-.02em;margin:0 0 .3em}
+.sec-lede{color:var(--muted);max-width:46em;margin:0 0 28px}
+.step{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:28px;margin:0 0 36px}
+@media (max-width:880px){.step{grid-template-columns:1fr;gap:12px}}
+.step h3{margin:0 0 .4em;font-size:1.1rem;display:flex;gap:10px;align-items:baseline}
+.step h3 .n{font:600 .8rem "JetBrains Mono",monospace;color:var(--accent-text);background:var(--accent-soft);border-radius:5px;padding:2px 7px}
+.step p{margin:.4em 0;color:var(--muted)}
+.step p strong{color:var(--ink)}
+
+.code{position:relative;background:var(--code-bg);border-radius:10px;overflow:hidden}
+.code pre{margin:0;padding:16px 18px;overflow:auto;color:var(--code-ink);font-size:.8rem;line-height:1.65;tab-size:4}
+.code .cmt{color:var(--code-cmt)}
+.code .fn{color:var(--code-key)}
+.code .str{color:var(--code-str)}
+.copy{position:absolute;top:8px;right:8px;border:1px solid #2c4255;background:#152635;color:#b9cede;border-radius:6px;font:500 .75rem Inter,sans-serif;padding:4px 10px;cursor:pointer}
+.copy:hover{background:#1d3448}
+details.yaml{margin-top:14px}
+details.yaml summary{cursor:pointer;font-weight:600;color:var(--accent-text);padding:6px 0}
+details.yaml pre{max-height:480px}
+
+.sm{width:100%;height:auto;display:block;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.sm text{font-family:Inter,sans-serif;fill:var(--ink)}
+.sm .lbl{font-size:12px;fill:var(--muted)}
+.sm .node{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.sm .node.on{fill:var(--accent-soft);stroke:var(--accent)}
+.sm .arrow{stroke:var(--muted);stroke-width:1.4;fill:none}
+.sm .ah{fill:var(--muted)}
+.sm .badge{fill:var(--accent)}
+.sm .badge-t{fill:#fff;font-size:11px;font-weight:600}
+.smkey{margin:12px 0 0;padding-left:1.4em;color:var(--muted);font-size:.9rem}
+.smkey li{margin:.2em 0}
+
+table.props{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:.9rem}
+table.props th,table.props td{text-align:left;padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+table.props thead th{border-top:0;background:var(--accent-soft);font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+table.props td:first-child{font:500 .85rem "JetBrains Mono",monospace;white-space:nowrap}
+table.props td.t{color:var(--muted);white-space:nowrap}
+table.props tr.grp td{background:var(--bg);font:600 .78rem Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text)}
+.tablewrap{overflow-x:auto}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column}
+.card h4{margin:0 0 .35em;font-size:1.05rem}
+.card p{margin:0 0 .6em;color:var(--muted);font-size:.93rem}
+.card ol{margin:.2em 0 1em;padding-left:1.2em;color:var(--muted);font-size:.9rem}
+.card ol li{margin:.25em 0}
+.card .btn{margin-top:auto;align-self:flex-start}
+.tag{display:inline-block;font:600 .7rem Inter,sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text);margin-bottom:8px}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:.88rem;margin-top:18px;max-width:52em}
+
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:.88rem}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="3" width="24" height="22" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M1 9h24" stroke="currentColor" stroke-width="2"/><rect x="6" y="13" width="14" height="5" rx="2" fill="#005eb8"/></svg>
+      Range Calendar
+    </a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#props">Properties</a>
+      <a href="#use">Using it</a>
+      <a href="#get">Download</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Power Apps canvas component</div>
+    <h1>A date-range calendar component for Power Apps</h1>
+    <p class="lede">The booking calendar from our Asset Booking app, rebuilt as a reusable component. Drop it on a screen, set a few properties, and read the dates back. It marks today, picks a single day or a range, and respects booking rules such as blocked dates and maximum length.</p>
+    <div class="btns">
+      <a class="btn primary" data-gh="solution">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v9m0 0L4.5 6.5M8 10l3.5-3.5M2 13h12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Download component (solution)
+      </a>
+      <a class="btn" href="#get">All download options</a>
+    </div>
+
+    <div class="play">
+      <div class="panel" id="inputs">
+        <h3>Input properties</h3>
+        <p class="sub">What your app sets. Change them and watch the calendar.</p>
+
+        <div class="prop"><div class="row"><span class="name">AllowRange</span>
+          <label class="switch"><input type="checkbox" id="pAllowRange" checked aria-label="AllowRange"><span></span></label></div>
+          <span class="val" id="vAllowRange"></span></div>
+
+        <div class="prop"><div class="row"><span class="name">MaxDays</span>
+          <select id="pMaxDays" aria-label="MaxDays"><option value="0">0 (no limit)</option><option value="3">3</option><option value="7">7</option><option value="14">14</option></select></div>
+          <span class="val" id="vMaxDays"></span></div>
+
+        <div class="prop"><div class="row"><span class="name">DisableWeekends</span>
+          <label class="switch"><input type="checkbox" id="pWeekends" aria-label="DisableWeekends"><span></span></label></div>
+          <span class="val" id="vWeekends"></span></div>
+
+        <div class="prop"><div class="row"><span class="name">BlockedDates</span>
+          <label class="switch"><input type="checkbox" id="pBlocked" checked aria-label="Use sample BlockedDates"><span></span></label></div>
+          <span class="val" id="vBlocked"></span></div>
+
+        <div class="prop"><div class="row"><span class="name">MaxDate</span>
+          <select id="pMaxDate" aria-label="MaxDate"><option value="">Blank()</option><option value="60">Today() + 60</option><option value="21">Today() + 21</option></select></div>
+          <span class="val" id="vMaxDate"></span></div>
+
+        <div class="prop"><div class="row"><span class="name">AccentColor</span>
+          <div class="swatches" id="pAccent">
+            <button style="background:#005eb8" data-c="#005eb8" data-rgba="RGBA(0, 94, 184, 1)" aria-label="Blue" aria-pressed="true"></button>
+            <button style="background:#007f3b" data-c="#007f3b" data-rgba="RGBA(0, 127, 59, 1)" aria-label="Green" aria-pressed="false"></button>
+            <button style="background:#330072" data-c="#330072" data-rgba="RGBA(51, 0, 114, 1)" aria-label="Purple" aria-pressed="false"></button>
+            <button style="background:#ae2573" data-c="#ae2573" data-rgba="RGBA(174, 37, 115, 1)" aria-label="Pink" aria-pressed="false"></button>
+          </div></div>
+          <span class="val" id="vAccent"></span></div>
+      </div>
+
+      <div class="calcol">
+        <div class="cal" id="cal" aria-label="Demo calendar">
+          <div class="cal-head">
+            <button class="navbtn" id="prev" aria-label="Previous month">‹</button>
+            <h2 id="month" aria-live="polite"></h2>
+            <button class="navbtn" id="next" aria-label="Next month">›</button>
+          </div>
+          <div class="grid7" id="wds"></div>
+          <div class="grid7" id="days"></div>
+          <div class="cal-foot">
+            <p id="sel"></p>
+            <button class="clear" id="clear">Clear</button>
+          </div>
+        </div>
+        <p class="calcap">This copy of the component is called <code>RangeCalendar1</code></p>
+      </div>
+
+      <div class="outp" id="outputs" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <h2 class="sec">How it works</h2>
+    <p class="sec-lede">The formulas below are the real ones from the component. The demo above runs the same rules in JavaScript so you can watch the values change as you click.</p>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">01</span>State lives inside the component</h3>
+        <p>Inside a component, <code>Set()</code> doesn't create app-wide variables. <strong>Each copy of the component gets its own <code>_month</code>, <code>_start</code> and <code>_end</code></strong>, so two calendars on one screen never interfere, and nothing clashes with variables already in your app.</p>
+        <p>The app never touches those variables. It reads <strong>output properties</strong> instead, and clears the calendar with <code>Reset(RangeCalendar1)</code>, which runs the component's <code>OnReset</code>.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// cmpRangeCalendar.OnReset</span>
+<span class="fn">Set</span>(_start, <span class="fn">Blank</span>()); <span class="fn">Set</span>(_end, <span class="fn">Blank</span>()); <span class="fn">Set</span>(_month, <span class="fn">Blank</span>())
+
+<span class="cmt">// Output properties (component → app)</span>
+StartDate   = _start
+EndDate     = <span class="fn">If</span>(<span class="fn">IsBlank</span>(_start), <span class="fn">Blank</span>(), <span class="fn">Coalesce</span>(_end, _start))
+DayCount    = <span class="fn">If</span>(<span class="fn">IsBlank</span>(_start), 0,
+                 <span class="fn">DateDiff</span>(_start, <span class="fn">Coalesce</span>(_end, _start), TimeUnit.Days) + 1)
+IsComplete  = !<span class="fn">IsBlank</span>(_end)
+
+<span class="cmt">// Month arrows (Previous uses -1)</span>
+<span class="fn">Set</span>(_month, <span class="fn">DateAdd</span>(<span class="fn">Coalesce</span>(_month, <span class="fn">Date</span>(<span class="fn">Year</span>(<span class="fn">Today</span>()), <span class="fn">Month</span>(<span class="fn">Today</span>()), 1)),
+                     1, TimeUnit.Months))</pre></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">02</span>42 days from <code>Sequence()</code>, rules worked out once</h3>
+        <p>A month can touch six different weeks, so the grid is always <strong>6 × 7 = 42 cells</strong> and never changes height. <code>Weekday(first, StartOfWeek.Monday) - 1</code> is how far to step back from the 1st to land on a Monday.</p>
+        <p>Every "can't pick this day" rule from the input properties is folded into one <strong><code>IsDisabled</code></strong> flag per cell. The button just uses <code>DisplayMode</code>, so disabled days can't be clicked or tabbed to.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// rcDays.Items   (WrapCount = 7)</span>
+<span class="fn">With</span>(
+    { first: <span class="fn">Coalesce</span>(_month, <span class="fn">Date</span>(<span class="fn">Year</span>(<span class="fn">Today</span>()), <span class="fn">Month</span>(<span class="fn">Today</span>()), 1)),
+      minD: cmpRangeCalendar.MinDate, maxD: cmpRangeCalendar.MaxDate },
+    <span class="fn">With</span>(
+        { offset: <span class="fn">Weekday</span>(first, StartOfWeek.Monday) - 1 },
+        <span class="fn">ForAll</span>(
+            <span class="fn">Sequence</span>(42, 0) As n,
+            <span class="fn">With</span>(
+                { d: <span class="fn">DateAdd</span>(first, n.Value - offset, TimeUnit.Days) },
+                {
+                    CalDate: d,
+                    InMonth: <span class="fn">Month</span>(d) = <span class="fn">Month</span>(first),
+                    IsToday: d = <span class="fn">Today</span>(),
+                    IsDisabled:
+                        (!<span class="fn">IsBlank</span>(minD) &amp;&amp; d &lt; minD)
+                        || (!<span class="fn">IsBlank</span>(maxD) &amp;&amp; d &gt; maxD)
+                        || (cmpRangeCalendar.DisableWeekends
+                            &amp;&amp; <span class="fn">Weekday</span>(d, StartOfWeek.Monday) &gt; 5)
+                        || d <span class="fn">in</span> cmpRangeCalendar.BlockedDates.BlockedDate
+                }
+            )
+        )
+    )
+)</pre></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">03</span>One button per cell, styled from state</h3>
+        <p>Each cell is a single button. <code>Fill</code> asks: is this the start or end day? Is it in between? <code>Coalesce(_end, _start)</code> treats a half-finished selection as one day, so the start lights up straight away.</p>
+        <p>Colours come from one input, <strong><code>AccentColor</code></strong>. <code>ColorFade()</code> makes the lighter "in between" and hover shades from it, so re-theming is a one-property change.</p>
+        <p><strong>Today</strong> gets a ring through <code>BorderThickness</code>, so it still shows when it's selected.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// rcDay.Fill</span>
+<span class="fn">With</span>(
+    { s: _start, e: <span class="fn">Coalesce</span>(_end, _start), d: ThisItem.CalDate },
+    <span class="fn">If</span>(
+        !<span class="fn">IsBlank</span>(s) &amp;&amp; (d = s || d = e), cmpRangeCalendar.AccentColor,
+        !<span class="fn">IsBlank</span>(s) &amp;&amp; d &gt; s &amp;&amp; d &lt; e,   <span class="fn">ColorFade</span>(cmpRangeCalendar.AccentColor, 0.88),
+        <span class="fn">RGBA</span>(0, 0, 0, 0)
+    )
+)
+
+<span class="cmt">// rcDay.BorderThickness</span>
+<span class="fn">If</span>(ThisItem.IsToday, 2, 0)
+
+<span class="cmt">// rcDay.DisplayMode</span>
+<span class="fn">If</span>(ThisItem.IsDisabled, DisplayMode.Disabled, DisplayMode.Edit)</pre></div>
+    </div>
+
+    <div class="step" id="logic">
+      <div>
+        <h3><span class="n">04</span>The selection rule</h3>
+        <p>The whole selection logic comes down to one sentence: <strong>if this click can't finish a valid range, it starts a new one.</strong></p>
+        <svg class="sm" viewBox="0 0 440 210" role="img" aria-label="Selection states: nothing selected, start picked, range set, with the clicks that move between them">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>
+          <rect id="sm0" class="node" x="10"  y="70" width="112" height="54" rx="10"/>
+          <text x="66"  y="94" text-anchor="middle" font-weight="600" font-size="13">Nothing</text>
+          <text x="66"  y="111" text-anchor="middle" class="lbl">_start blank</text>
+          <rect id="sm1" class="node" x="164" y="70" width="112" height="54" rx="10"/>
+          <text x="220" y="94" text-anchor="middle" font-weight="600" font-size="13">Start picked</text>
+          <text x="220" y="111" text-anchor="middle" class="lbl">_end blank</text>
+          <rect id="sm2" class="node" x="318" y="70" width="112" height="54" rx="10"/>
+          <text x="374" y="94" text-anchor="middle" font-weight="600" font-size="13">Range set</text>
+          <text x="374" y="111" text-anchor="middle" class="lbl">IsComplete</text>
+          <path class="arrow" d="M122 97H162" marker-end="url(#ah)"/>
+          <path class="arrow" d="M276 97H316" marker-end="url(#ah)"/>
+          <path class="arrow" d="M205 124C195 162 245 162 236 126" marker-end="url(#ah)"/>
+          <path class="arrow" d="M374 70C374 22 240 22 240 68" marker-end="url(#ah)"/>
+          <path class="arrow" d="M400 124C400 200 40 200 40 126" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+          <circle class="badge" cx="142" cy="80" r="9"/><text class="badge-t" x="142" y="84" text-anchor="middle">1</text>
+          <circle class="badge" cx="296" cy="80" r="9"/><text class="badge-t" x="296" y="84" text-anchor="middle">2</text>
+          <circle class="badge" cx="220" cy="164" r="9"/><text class="badge-t" x="220" y="168" text-anchor="middle">3</text>
+          <circle class="badge" cx="307" cy="27" r="9"/><text class="badge-t" x="307" y="31" text-anchor="middle">4</text>
+          <circle class="badge" cx="120" cy="186" r="9" style="fill:var(--muted)"/><text class="badge-t" x="120" y="190" text-anchor="middle">5</text>
+        </svg>
+        <ol class="smkey">
+          <li>Click any available day: it becomes the start.</li>
+          <li>Click the start or a later day: it becomes the end.</li>
+          <li>Click an earlier day, or one that would make the range too long or cross a blocked day: it becomes the new start.</li>
+          <li>Click any day once a range is set: start again from there.</li>
+          <li><em>Clear</em> or <code>Reset(RangeCalendar1)</code> empties it.</li>
+        </ol>
+        <p>With <code>AllowRange</code> off, every click is a complete one-day selection.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// rcDay.OnSelect</span>
+<span class="fn">With</span>(
+    { d: ThisItem.CalDate },
+    <span class="fn">If</span>(
+        <span class="cmt">// Single-day mode: every click is a complete selection</span>
+        !cmpRangeCalendar.AllowRange,
+            <span class="fn">Set</span>(_start, d); <span class="fn">Set</span>(_end, d),
+        <span class="cmt">// Start a new selection when...</span>
+        <span class="fn">IsBlank</span>(_start)                       <span class="cmt">// nothing picked yet</span>
+            || !<span class="fn">IsBlank</span>(_end)                 <span class="cmt">// a range is already complete</span>
+            || d &lt; _start                     <span class="cmt">// clicked before the start</span>
+            || (cmpRangeCalendar.MaxDays &gt; 0  <span class="cmt">// range would be too long</span>
+                &amp;&amp; <span class="fn">DateDiff</span>(_start, d, TimeUnit.Days) + 1 &gt; cmpRangeCalendar.MaxDays)
+            || <span class="fn">CountRows</span>(                     <span class="cmt">// range would cross a blocked day</span>
+                   <span class="fn">Filter</span>(cmpRangeCalendar.BlockedDates,
+                          BlockedDate &gt; _start &amp;&amp; BlockedDate &lt; d)
+               ) &gt; 0,
+            <span class="fn">Set</span>(_start, d); <span class="fn">Set</span>(_end, <span class="fn">Blank</span>()),
+        <span class="cmt">// ...otherwise finish it (same day = one-day selection)</span>
+        <span class="fn">Set</span>(_end, d)
+    )
+)</pre></div>
+    </div>
+  </div>
+</section>
+
+<section id="props">
+  <div class="wrap">
+    <h2 class="sec">Properties</h2>
+    <p class="sec-lede">These are everything your app needs to know about the component. Inputs have sensible defaults, so a plain copy works with nothing set.</p>
+    <div class="tablewrap">
+    <table class="props">
+      <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="4">Inputs: your app sets these</td></tr>
+        <tr><td>MinDate</td><td class="t">Date</td><td><code>Today()</code></td><td>Days before this are disabled. Set to <code>Blank()</code> to allow past dates.</td></tr>
+        <tr><td>MaxDate</td><td class="t">Date</td><td><code>Blank()</code></td><td>Days after this are disabled, e.g. <code>DateAdd(Today(), 90, TimeUnit.Days)</code>. Blank means no limit.</td></tr>
+        <tr><td>BlockedDates</td><td class="t">Table</td><td><code>Table({BlockedDate: Date(1900, 1, 1)})</code></td><td>Days that can't be picked, in a column called <code>BlockedDate</code>. A range can't cross one.</td></tr>
+        <tr><td>DisableWeekends</td><td class="t">Boolean</td><td><code>false</code></td><td>Saturdays and Sundays can't be a start or end day. A range can still span a weekend.</td></tr>
+        <tr><td>AllowRange</td><td class="t">Boolean</td><td><code>true</code></td><td>Turn off for single-day picking.</td></tr>
+        <tr><td>MaxDays</td><td class="t">Number</td><td><code>0</code></td><td>Longest range allowed, counting both ends. <code>0</code> means no limit.</td></tr>
+        <tr><td>AccentColor</td><td class="t">Color</td><td><code>RGBA(0, 94, 184, 1)</code></td><td>Selection, today ring and buttons. Lighter shades are worked out from it.</td></tr>
+        <tr class="grp"><td colspan="4">Outputs: your app reads these</td></tr>
+        <tr><td>StartDate</td><td class="t">Date</td><td></td><td>First selected day, or blank.</td></tr>
+        <tr><td>EndDate</td><td class="t">Date</td><td></td><td>Last selected day. Equals <code>StartDate</code> until an end is picked.</td></tr>
+        <tr><td>DayCount</td><td class="t">Number</td><td></td><td>Days in the selection, counting both ends. <code>0</code> when empty.</td></tr>
+        <tr><td>IsComplete</td><td class="t">Boolean</td><td></td><td><code>true</code> once an end day has been picked.</td></tr>
+        <tr class="grp"><td colspan="4">Behaviour</td></tr>
+        <tr><td>OnReset</td><td class="t">Built in</td><td></td><td>Runs on <code>Reset(RangeCalendar1)</code> and empties the selection and month.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<section id="use">
+  <div class="wrap">
+    <h2 class="sec">Using it in your app</h2>
+    <p class="sec-lede">Once the component is on a screen, everything happens through its properties. These examples assume the copy is called <code>RangeCalendar1</code>.</p>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">A</span>Save a booking</h3>
+        <p>Output properties update by themselves, so a <strong>Book</strong> button can enable itself as soon as a range is complete, and save the dates directly.</p>
+        <p>If one click should be enough for a one-day booking, use <code>!IsBlank(RangeCalendar1.StartDate)</code> instead of <code>IsComplete</code>.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// btnBook.DisplayMode</span>
+<span class="fn">If</span>(RangeCalendar1.IsComplete, DisplayMode.Edit, DisplayMode.Disabled)
+
+<span class="cmt">// btnBook.OnSelect</span>
+<span class="fn">Patch</span>(
+    Bookings,
+    <span class="fn">Defaults</span>(Bookings),
+    {
+        StartDate: RangeCalendar1.StartDate,
+        EndDate:   RangeCalendar1.EndDate
+    }
+);
+<span class="fn">Reset</span>(RangeCalendar1)
+
+<span class="cmt">// lblSummary.Text</span>
+RangeCalendar1.DayCount &amp; <span class="fn">If</span>(RangeCalendar1.DayCount = 1, <span class="str">" day"</span>, <span class="str">" days"</span>)</pre></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">B</span>Block days that are already booked</h3>
+        <p>Bookings are usually stored as start and end dates, but the calendar wants a list of single days. Expand each booking into its days once, when the screen opens or the asset changes, and pass the result to <code>BlockedDates</code>.</p>
+        <p>Use dates without times (SharePoint "Date only" columns, <code>Today()</code>, <code>Date()</code>), or the matching won't line up.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre><span class="cmt">// e.g. galAssets.OnSelect or Screen.OnVisible</span>
+<span class="fn">Clear</span>(colBlocked);
+<span class="fn">ForAll</span>(
+    <span class="fn">Filter</span>(Bookings, AssetID = varAsset.ID, EndDate &gt;= <span class="fn">Today</span>()) As b,
+    <span class="fn">Collect</span>(
+        colBlocked,
+        <span class="fn">ForAll</span>(
+            <span class="fn">Sequence</span>(<span class="fn">DateDiff</span>(b.StartDate, b.EndDate, TimeUnit.Days) + 1, 0) As i,
+            { BlockedDate: <span class="fn">DateAdd</span>(b.StartDate, i.Value, TimeUnit.Days) }
+        )
+    )
+)
+
+<span class="cmt">// RangeCalendar1.BlockedDates</span>
+colBlocked</pre></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <h3><span class="n">C</span>Set the rules</h3>
+        <p>Every rule is an input property on the copy you placed. They can be fixed values or formulas, for example a booking limit read from a Settings list.</p>
+      </div>
+      <div class="code"><button class="copy">Copy</button><pre>RangeCalendar1.MaxDate         = <span class="fn">DateAdd</span>(<span class="fn">Today</span>(), 90, TimeUnit.Days)
+RangeCalendar1.MaxDays         = <span class="fn">LookUp</span>(Settings, Title = <span class="str">"MaxBookingDays"</span>).Value
+RangeCalendar1.DisableWeekends = true
+RangeCalendar1.AccentColor     = <span class="fn">ColorValue</span>(<span class="str">"#007f3b"</span>)</pre></div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><h4>Two calendars, one screen</h4><p>Each copy keeps its own selection, so "loan dates" and "return inspection" pickers can sit side by side.</p></div>
+      <div class="card"><h4>One place to fix it</h4><p>From a component library, a change to the calendar is offered to every app that uses it the next time they're edited.</p></div>
+      <div class="card"><h4>Date-only maths</h4><p>Everything uses <code>Today()</code> and <code>Date()</code>, never <code>Now()</code>, so nothing drifts a day when the clocks change.</p></div>
+      <div class="card"><h4>No event property needed</h4><p>Outputs recalculate on their own, so the app reacts without <code>OnChange</code>. Custom event properties are still experimental in Power Apps, so the component avoids them.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="get">
+  <div class="wrap">
+    <h2 class="sec">Download</h2>
+    <p class="sec-lede">Choose by what you want to do. The solution is the one to use in real apps.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">Recommended</span>
+        <h4>Install the component</h4>
+        <p>A solution containing the <strong>Range Calendar</strong> component library.</p>
+        <ol>
+          <li>Download the <code>.zip</code>. Don't unzip it.</li>
+          <li>In <a href="https://make.powerapps.com">make.powerapps.com</a>, go to <strong>Solutions → Import solution</strong> and pick the file.</li>
+          <li>Open your app, then <strong>Insert → Get more components</strong> and choose <strong>cmpRangeCalendar</strong>.</li>
+        </ol>
+        <a class="btn primary" data-gh="solution">Download solution (.zip)</a>
+      </div>
+      <div class="card">
+        <span class="tag">Try it</span>
+        <h4>Open the demo app</h4>
+        <p>A small canvas app with the calendar already on a screen, wired to a few labels and a Reset button.</p>
+        <ol>
+          <li>Download the <code>.msapp</code>.</li>
+          <li>In <a href="https://make.powerapps.com">make.powerapps.com</a>, go to <strong>Apps → Import app → From file (.msapp)</strong>.</li>
+          <li>Play it, or open the component to read the formulas.</li>
+        </ol>
+        <a class="btn" data-gh="demo">Download demo app (.msapp)</a>
+      </div>
+      <div class="card">
+        <span class="tag">Learn</span>
+        <h4>Read or rebuild the source</h4>
+        <p>Plain-text YAML you can read on GitHub, paste into Studio, or use to <a href="docs/BUILD.md" data-gh-blob="docs/BUILD.md">build the component yourself</a>. There's also a simpler paste-in version that uses app variables, for learning the technique.</p>
+        <ol>
+          <li><a href="src/component/RangeCalendar.component.pa.yaml" download>Component controls (YAML)</a></li>
+          <li><a href="src/paste-in/RangeCalendar.pa.yaml" download>Simple paste-in version (YAML)</a></li>
+        </ol>
+        <a class="btn" data-gh="repo">View on GitHub</a>
+      </div>
+    </div>
+    <p class="note">Importing a solution needs an environment with Dataverse and permission to import solutions (Environment Maker or above). If you can't import solutions, use the demo app or build it from the YAML.</p>
+
+    <details class="yaml">
+      <summary>Show the component YAML</summary>
+      <div class="code"><button class="copy">Copy YAML</button><pre># Range Calendar component: the controls that go INSIDE the component
+#
+# This file is not the whole component. It holds the controls that live inside it.
+# Build the component first (docs/BUILD.md), then:
+#   1. create the component and name it  cmpRangeCalendar  (exactly that)
+#   2. add the seven INPUT properties listed below
+#   3. copy this whole file and paste it onto the empty component canvas
+#   4. add the four OUTPUT properties and the OnReset formula listed below
+#
+# ---------------------------------------------------------------------------
+# Component settings (select cmpRangeCalendar in the Tree view)
+#   Width   364
+#   Height  430
+#   OnReset Set(_start, Blank()); Set(_end, Blank()); Set(_month, Blank())
+#
+# INPUT properties          Data type       Default formula
+#   MinDate                 Date and time   Today()
+#   MaxDate                 Date and time   Blank()
+#   BlockedDates            Table           Table({BlockedDate: Date(1900, 1, 1)})
+#   DisableWeekends         Boolean         false
+#   AllowRange              Boolean         true
+#   MaxDays                 Number          0
+#   AccentColor             Color           RGBA(0, 94, 184, 1)
+#
+# OUTPUT properties         Data type       Formula
+#   StartDate               Date and time   _start
+#   EndDate                 Date and time   If(IsBlank(_start), Blank(), Coalesce(_end, _start))
+#   DayCount                Number          If(IsBlank(_start), 0, DateDiff(_start, Coalesce(_end, _start), TimeUnit.Days) + 1)
+#   IsComplete              Boolean         !IsBlank(_end)
+#
+# Private state (Set() inside a component belongs to that one copy of it):
+#   _month  first day of the month on show (blank = this month)
+#   _start  first selected day
+#   _end    last selected day (blank = start picked, end not yet)
+#
+# If Studio reports an unknown control version, change the @x.y.z suffix to the
+# version your Studio offers.
+# ---------------------------------------------------------------------------
+
+- rcFrame:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =0
+      Y: =0
+      Width: =364
+      Height: =430
+      Fill: =RGBA(255, 255, 255, 1)
+      BorderColor: =RGBA(216, 221, 224, 1)
+      BorderThickness: =1
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - rcPrev:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =&quot;‹&quot;
+            X: =8
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =0
+            AccessibleLabel: =&quot;Previous month&quot;
+            OnSelect: |-
+              =Set(
+                  _month,
+                  DateAdd(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), -1, TimeUnit.Months)
+              )
+      - rcMonth:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Text(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), &quot;mmmm yyyy&quot;)
+            X: =56
+            Y: =8
+            Width: =252
+            Height: =40
+            Align: =Align.Center
+            FontWeight: =FontWeight.Semibold
+            Size: =15
+            Color: =RGBA(33, 43, 50, 1)
+      - rcNext:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =&quot;›&quot;
+            X: =316
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =0
+            AccessibleLabel: =&quot;Next month&quot;
+            OnSelect: |-
+              =Set(
+                  _month,
+                  DateAdd(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), 1, TimeUnit.Months)
+              )
+      - rcWeekdays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: =[&quot;Mo&quot;, &quot;Tu&quot;, &quot;We&quot;, &quot;Th&quot;, &quot;Fr&quot;, &quot;Sa&quot;, &quot;Su&quot;]
+            X: =8
+            Y: =54
+            Width: =348
+            Height: =28
+            WrapCount: =7
+            TemplateSize: =28
+            TemplatePadding: =0
+            ShowScrollbar: =false
+          Children:
+            - rcWeekdayLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Value
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Align: =Align.Center
+                  Size: =10
+                  FontWeight: =FontWeight.Semibold
+                  Color: =RGBA(76, 99, 112, 1)
+      - rcDays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {
+                      first: Coalesce(_month, Date(Year(Today()), Month(Today()), 1)),
+                      minD: cmpRangeCalendar.MinDate,
+                      maxD: cmpRangeCalendar.MaxDate
+                  },
+                  With(
+                      // How many days to step back so the grid starts on a Monday
+                      { offset: Weekday(first, StartOfWeek.Monday) - 1 },
+                      // 6 weeks x 7 days = 42 cells covers every possible month
+                      ForAll(
+                          Sequence(42, 0) As n,
+                          With(
+                              { d: DateAdd(first, n.Value - offset, TimeUnit.Days) },
+                              {
+                                  CalDate: d,
+                                  InMonth: Month(d) = Month(first),
+                                  IsToday: d = Today(),
+                                  // Every &quot;can&#x27;t pick this day&quot; rule lives here, once
+                                  IsDisabled:
+                                      (!IsBlank(minD) &amp;&amp; d &lt; minD)
+                                      || (!IsBlank(maxD) &amp;&amp; d &gt; maxD)
+                                      || (cmpRangeCalendar.DisableWeekends &amp;&amp; Weekday(d, StartOfWeek.Monday) &gt; 5)
+                                      || d in cmpRangeCalendar.BlockedDates.BlockedDate
+                              }
+                          )
+                      )
+                  )
+              )
+            X: =8
+            Y: =84
+            Width: =348
+            Height: =288
+            WrapCount: =7
+            TemplateSize: =48
+            TemplatePadding: =1
+            ShowScrollbar: =false
+          Children:
+            - rcDay:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =Day(ThisItem.CalDate)
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Size: =12
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  AccessibleLabel: =Text(ThisItem.CalDate, &quot;dddd d mmmm yyyy&quot;)
+                  DisplayMode: =If(ThisItem.IsDisabled, DisplayMode.Disabled, DisplayMode.Edit)
+                  # Today gets a ring, whatever else is going on
+                  BorderThickness: =If(ThisItem.IsToday, 2, 0)
+                  BorderColor: =cmpRangeCalendar.AccentColor
+                  Fill: |-
+                    =With(
+                        { s: _start, e: Coalesce(_end, _start), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) &amp;&amp; (d = s || d = e), cmpRangeCalendar.AccentColor,               // start / end
+                            !IsBlank(s) &amp;&amp; d &gt; s &amp;&amp; d &lt; e, ColorFade(cmpRangeCalendar.AccentColor, 0.88), // in between
+                            RGBA(0, 0, 0, 0)
+                        )
+                    )
+                  HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.75)
+                  PressedFill: =ColorFade(cmpRangeCalendar.AccentColor, -0.25)
+                  DisabledFill: =RGBA(0, 0, 0, 0)
+                  Color: |-
+                    =With(
+                        { s: _start, e: Coalesce(_end, _start), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) &amp;&amp; (d = s || d = e), RGBA(255, 255, 255, 1),
+                            !ThisItem.InMonth, RGBA(174, 183, 189, 1),
+                            RGBA(33, 43, 50, 1)
+                        )
+                    )
+                  HoverColor: =RGBA(33, 43, 50, 1)
+                  DisabledColor: =RGBA(200, 206, 210, 1)
+                  FontWeight: =If(ThisItem.IsToday, FontWeight.Bold, FontWeight.Normal)
+                  # One rule: if this click can&#x27;t finish a valid range, it starts a new one.
+                  OnSelect: |-
+                    =With(
+                        { d: ThisItem.CalDate },
+                        If(
+                            // Single-day mode: every click is a complete selection
+                            !cmpRangeCalendar.AllowRange,
+                                Set(_start, d); Set(_end, d),
+                            // Start a new selection when...
+                            IsBlank(_start)                       // nothing picked yet
+                                || !IsBlank(_end)                 // a range is already complete
+                                || d &lt; _start                     // clicked before the start
+                                || (cmpRangeCalendar.MaxDays &gt; 0  // range would be too long
+                                    &amp;&amp; DateDiff(_start, d, TimeUnit.Days) + 1 &gt; cmpRangeCalendar.MaxDays)
+                                || CountRows(                     // range would cross a blocked day
+                                       Filter(cmpRangeCalendar.BlockedDates, BlockedDate &gt; _start &amp;&amp; BlockedDate &lt; d)
+                                   ) &gt; 0,
+                                Set(_start, d); Set(_end, Blank()),
+                            // ...otherwise finish it (same day = one-day selection)
+                            Set(_end, d)
+                        )
+                    )
+      - rcSummary:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(
+                  IsBlank(_start),
+                  If(cmpRangeCalendar.AllowRange, &quot;Select a start date&quot;, &quot;Select a date&quot;),
+                  With(
+                      { e: Coalesce(_end, _start), n: DateDiff(_start, Coalesce(_end, _start), TimeUnit.Days) + 1 },
+                      Text(_start, &quot;ddd d mmm&quot;) &amp;
+                      If(e &lt;&gt; _start, &quot; – &quot; &amp; Text(e, &quot;ddd d mmm&quot;), &quot;&quot;) &amp;
+                      &quot;  ·  &quot; &amp; n &amp; If(n = 1, &quot; day&quot;, &quot; days&quot;) &amp;
+                      If(IsBlank(_end), &quot;  (pick an end date)&quot;, &quot;&quot;)
+                  )
+              )
+            X: =12
+            Y: =380
+            Width: =268
+            Height: =40
+            Size: =11
+            Color: =RGBA(33, 43, 50, 1)
+      - rcClear:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =&quot;Clear&quot;
+            X: =288
+            Y: =384
+            Width: =64
+            Height: =32
+            Size: =11
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            BorderColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =1
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            DisplayMode: =If(IsBlank(_start), DisplayMode.Disabled, DisplayMode.Edit)
+            OnSelect: =Set(_start, Blank()); Set(_end, Blank())
+</pre></div>
+    </details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Made by the Digital Services Team at University Hospitals of Morecambe Bay NHS Foundation Trust.</span>
+    <span>MIT licence · <a data-gh="repo">GitHub</a></span>
+  </div>
+</footer>
+
+<script>
+// ---- Change this one line to your GitHub username/repo name ----
+const REPO = "GITHUB-USER/powerapps-range-calendar";
+// ----------------------------------------------------------------
+
+(function(){
+  const gh = "https://github.com/" + REPO;
+  const links = {
+    repo: gh,
+    solution: gh + "/releases/latest/download/RangeCalendar_solution.zip",
+    demo: gh + "/releases/latest/download/RangeCalendarDemo.msapp"
+  };
+  document.querySelectorAll("[data-gh]").forEach(a => a.href = links[a.dataset.gh]);
+  document.querySelectorAll("[data-gh-blob]").forEach(a => a.href = gh + "/blob/main/" + a.dataset.ghBlob);
+
+  // ---- Model: the same as the component ----
+  const today = (()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());})();
+  const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+  const same = (a,b) => !!a && !!b && a.getTime()===b.getTime();
+  const diff = (a,b) => Math.round((b-a)/864e5);
+  const fmt = (d,o) => d.toLocaleDateString('en-GB', o);
+  const pfx = d => `Date(${d.getFullYear()}, ${d.getMonth()+1}, ${d.getDate()})`;
+
+  // sample blocked days: a few days ahead, all on weekdays so they're visible
+  const sampleBlocked = (()=>{const out=[];let d=addDays(today,4);while(out.length<3){const w=(d.getDay()+6)%7;if(w<5)out.push(d);d=addDays(d,out.length===2?6:1);}return out;})();
+
+  const P = {AllowRange:true, MaxDays:0, DisableWeekends:false, BlockedDates:sampleBlocked, MinDate:today, MaxDate:null, AccentColor:"#005eb8", AccentRGBA:"RGBA(0, 94, 184, 1)"};
+  let _month=null, _start=null, _end=null;
+  let why = "Click a day to start a selection.";
+
+  const $ = id => document.getElementById(id);
+  const month = () => _month || new Date(today.getFullYear(), today.getMonth(), 1);
+
+  ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach(w=>{const el=document.createElement('div');el.className='wd';el.textContent=w;$('wds').appendChild(el);});
+
+  function isBlocked(d){ return P.BlockedDates.some(b=>same(b,d)); }
+  function items(){                                              // rcDays.Items
+    const first = month(), offset = (first.getDay()+6)%7;
+    return Array.from({length:42},(_,n)=>{
+      const d = addDays(first, n-offset);
+      const blocked = isBlocked(d);
+      return {CalDate:d, InMonth:d.getMonth()===first.getMonth(), IsToday:same(d,today), Blocked:blocked,
+        IsDisabled:(P.MinDate && d<P.MinDate) || (P.MaxDate && d>P.MaxDate) || (P.DisableWeekends && (d.getDay()+6)%7>4) || blocked};
+    });
+  }
+
+  function onSelect(d){                                          // rcDay.OnSelect
+    if(!P.AllowRange){ _start=d; _end=d; why="<b>AllowRange</b> is off, so every click is a complete one-day selection."; }
+    else{
+      const tooLong = _start && P.MaxDays>0 && diff(_start,d)+1>P.MaxDays;
+      const crosses = _start && P.BlockedDates.some(b=>b>_start && b<d);
+      if(_start===null || _end!==null || d<_start || tooLong || crosses){
+        why = _start===null ? "Nothing was picked, so this click <b>starts</b> a selection."
+            : _end!==null ? "A range was already complete, so this click <b>starts a new one</b>."
+            : d<_start ? "That day is before the start, so it becomes the <b>new start</b>."
+            : tooLong ? `That would be ${diff(_start,d)+1} days, over <b>MaxDays</b> (${P.MaxDays}), so it becomes the <b>new start</b>.`
+            : "That range would cross a <b>blocked day</b>, so it becomes the <b>new start</b>.";
+        _start=d; _end=null;
+      } else {
+        why = same(d,_start) ? "Same day as the start: a complete <b>one-day</b> selection." : "On or after the start, so this click <b>sets the end</b>.";
+        _end=d;
+      }
+    }
+    render(true);
+  }
+
+  function render(flash){
+    const cal=$('cal');
+    cal.style.setProperty('--ac', P.AccentColor);
+    cal.style.setProperty('--ac-soft', `color-mix(in srgb, ${P.AccentColor} 12%, white)`);
+    cal.style.setProperty('--ac-hover', `color-mix(in srgb, ${P.AccentColor} 25%, white)`);
+    $('month').textContent = fmt(month(),{month:'long',year:'numeric'});
+    const s=_start, e=_end||_start;
+    const box=$('days'); box.innerHTML='';
+    items().forEach(it=>{
+      const b=document.createElement('button'); b.className='day'; b.textContent=it.CalDate.getDate();
+      b.setAttribute('aria-label', fmt(it.CalDate,{weekday:'long',day:'numeric',month:'long',year:'numeric'}) + (it.Blocked?', blocked':''));
+      if(!it.InMonth) b.classList.add('out');
+      if(it.Blocked) b.classList.add('blocked');
+      if(it.IsToday){ b.classList.add('today'); b.setAttribute('aria-current','date'); }
+      if(s && (same(it.CalDate,s)||same(it.CalDate,e))){ b.classList.add('end'); b.setAttribute('aria-pressed','true'); }
+      else if(s && it.CalDate>s && it.CalDate<e) b.classList.add('mid');
+      b.disabled = !!it.IsDisabled;
+      b.onclick=()=>onSelect(it.CalDate);
+      box.appendChild(b);
+    });
+
+    if(!s) $('sel').innerHTML = `<span>${P.AllowRange?'Select a start date':'Select a date'}</span>`;
+    else{
+      const n=diff(s,e)+1;
+      $('sel').innerHTML = fmt(s,{weekday:'short',day:'numeric',month:'short'}) + (same(s,e)?'':' – '+fmt(e,{weekday:'short',day:'numeric',month:'short'})) + ` <span>· ${n} ${n===1?'day':'days'}</span>`;
+    }
+    $('clear').disabled=!s;
+
+    // outputs panel
+    const v = x => x ? `<span class="v">${pfx(x)}</span>` : '<span class="blank">Blank()</span>';
+    const b = x => `<span class="v">${x}</span>`;
+    const dc = s ? diff(s,e)+1 : 0;
+    $('outputs').innerHTML =
+      `<div class="grp"><h3>Output properties: what your app reads</h3>`+
+      `<span class="k">RangeCalendar1.StartDate</span>  = ${v(_start)}<br>`+
+      `<span class="k">RangeCalendar1.EndDate</span>    = ${v(s?e:null)}<br>`+
+      `<span class="k">RangeCalendar1.DayCount</span>   = ${b(dc)}<br>`+
+      `<span class="k">RangeCalendar1.IsComplete</span> = ${b(_end!==null)}</div>`+
+      `<div class="grp"><h3>Inside the component (private)</h3>`+
+      `<span class="k">_month</span> = ${v(month())}<br>`+
+      `<span class="k">_start</span> = ${v(_start)}<br>`+
+      `<span class="k">_end</span>&nbsp;&nbsp; = ${v(_end)}</div>`+
+      `<div class="why">${why}</div>`;
+    if(flash){ const o=$('outputs'); o.classList.remove('flash'); void o.offsetWidth; o.classList.add('flash'); }
+
+    // input value lines
+    $('vAllowRange').textContent = `= ${P.AllowRange}`;
+    $('vMaxDays').textContent = `= ${P.MaxDays}`;
+    $('vWeekends').textContent = `= ${P.DisableWeekends}`;
+    $('vBlocked').textContent = P.BlockedDates.length ? `= Table(${P.BlockedDates.map(d=>`{BlockedDate: ${pfx(d)}}`).join(', ')})` : '= Table({BlockedDate: Date(1900, 1, 1)})  (default, nothing blocked)';
+    $('vMaxDate').textContent = P.MaxDate ? `= ${pfx(P.MaxDate)}` : '= Blank()  (no limit)';
+    $('vAccent').textContent = `= ${P.AccentRGBA}`;
+
+    ['sm0','sm1','sm2'].forEach(id=>$(id).classList.remove('on'));
+    $(!_start?'sm0':!_end?'sm1':'sm2').classList.add('on');
+  }
+
+  // Changing inputs behaves like the app changing a property: the selection stays,
+  // only the rules change. (Use Reset() in an app if you want it cleared.)
+  $('pAllowRange').onchange=e=>{P.AllowRange=e.target.checked; render();};
+  $('pMaxDays').onchange=e=>{P.MaxDays=+e.target.value; render();};
+  $('pWeekends').onchange=e=>{P.DisableWeekends=e.target.checked; render();};
+  $('pBlocked').onchange=e=>{P.BlockedDates=e.target.checked?sampleBlocked:[]; render();};
+  $('pMaxDate').onchange=e=>{P.MaxDate=e.target.value?addDays(today,+e.target.value):null; render();};
+  document.querySelectorAll('#pAccent button').forEach(btn=>btn.onclick=()=>{
+    document.querySelectorAll('#pAccent button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true'); P.AccentColor=btn.dataset.c; P.AccentRGBA=btn.dataset.rgba; render();
+  });
+
+  $('prev').onclick=()=>{const m=month(); _month=new Date(m.getFullYear(),m.getMonth()-1,1); render();};
+  $('next').onclick=()=>{const m=month(); _month=new Date(m.getFullYear(),m.getMonth()+1,1); render();};
+  $('clear').onclick=()=>{_start=null;_end=null;why="Cleared: <b>_start</b> and <b>_end</b> are Blank() again."; render(true);};
+
+  document.querySelectorAll('.copy').forEach(btn=>{
+    btn.onclick=()=>{
+      const text=btn.parentElement.querySelector('pre').innerText;
+      const done=()=>{const t=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=t,1400);};
+      if(navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(()=>{});
+    };
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+# Range Calendar component: the controls that go INSIDE the component
+#
+# This file is not the whole component. It holds the controls that live inside it.
+# Build the component first (docs/BUILD.md), then:
+#   1. create the component and name it  cmpRangeCalendar  (exactly that)
+#   2. add the seven INPUT properties listed below
+#   3. copy this whole file and paste it onto the empty component canvas
+#   4. add the four OUTPUT properties and the OnReset formula listed below
+#
+# ---------------------------------------------------------------------------
+# Component settings (select cmpRangeCalendar in the Tree view)
+#   Width   364
+#   Height  430
+#   OnReset Set(_start, Blank()); Set(_end, Blank()); Set(_month, Blank())
+#
+# INPUT properties          Data type       Default formula
+#   MinDate                 Date and time   Today()
+#   MaxDate                 Date and time   Blank()
+#   BlockedDates            Table           Table({BlockedDate: Date(1900, 1, 1)})
+#   DisableWeekends         Boolean         false
+#   AllowRange              Boolean         true
+#   MaxDays                 Number          0
+#   AccentColor             Color           RGBA(0, 94, 184, 1)
+#
+# OUTPUT properties         Data type       Formula
+#   StartDate               Date and time   _start
+#   EndDate                 Date and time   If(IsBlank(_start), Blank(), Coalesce(_end, _start))
+#   DayCount                Number          If(IsBlank(_start), 0, DateDiff(_start, Coalesce(_end, _start), TimeUnit.Days) + 1)
+#   IsComplete              Boolean         !IsBlank(_end)
+#
+# Private state (Set() inside a component belongs to that one copy of it):
+#   _month  first day of the month on show (blank = this month)
+#   _start  first selected day
+#   _end    last selected day (blank = start picked, end not yet)
+#
+# If Studio reports an unknown control version, change the @x.y.z suffix to the
+# version your Studio offers.
+# ---------------------------------------------------------------------------
+
+- rcFrame:
+    Control: GroupContainer@1.5.0
+    Variant: ManualLayout
+    Properties:
+      X: =0
+      Y: =0
+      Width: =364
+      Height: =430
+      Fill: =RGBA(255, 255, 255, 1)
+      BorderColor: =RGBA(216, 221, 224, 1)
+      BorderThickness: =1
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - rcPrev:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="‹"
+            X: =8
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =0
+            Tooltip: ="Previous month"
+            OnSelect: |-
+              =Set(
+                  _month,
+                  DateAdd(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), -1, TimeUnit.Months)
+              )
+      - rcMonth:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Text(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), "mmmm yyyy")
+            X: =56
+            Y: =8
+            Width: =252
+            Height: =40
+            Align: =Align.Center
+            FontWeight: =FontWeight.Semibold
+            Size: =15
+            Color: =RGBA(33, 43, 50, 1)
+      - rcNext:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="›"
+            X: =316
+            Y: =8
+            Width: =40
+            Height: =40
+            Size: =20
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =0
+            Tooltip: ="Next month"
+            OnSelect: |-
+              =Set(
+                  _month,
+                  DateAdd(Coalesce(_month, Date(Year(Today()), Month(Today()), 1)), 1, TimeUnit.Months)
+              )
+      - rcWeekdays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: =["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            X: =8
+            Y: =54
+            Width: =348
+            Height: =28
+            WrapCount: =7
+            TemplateSize: =28
+            TemplatePadding: =0
+            ShowScrollbar: =false
+          Children:
+            - rcWeekdayLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Value
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Align: =Align.Center
+                  Size: =10
+                  FontWeight: =FontWeight.Semibold
+                  Color: =RGBA(76, 99, 112, 1)
+      - rcDays:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {
+                      first: Coalesce(_month, Date(Year(Today()), Month(Today()), 1)),
+                      minD: cmpRangeCalendar.MinDate,
+                      maxD: cmpRangeCalendar.MaxDate
+                  },
+                  With(
+                      // How many days to step back so the grid starts on a Monday
+                      { offset: Weekday(first, StartOfWeek.Monday) - 1 },
+                      // 6 weeks x 7 days = 42 cells covers every possible month
+                      ForAll(
+                          Sequence(42, 0) As n,
+                          With(
+                              { d: DateAdd(first, n.Value - offset, TimeUnit.Days) },
+                              {
+                                  CalDate: d,
+                                  InMonth: Month(d) = Month(first),
+                                  IsToday: d = Today(),
+                                  // Every "can't pick this day" rule lives here, once
+                                  IsDisabled:
+                                      (!IsBlank(minD) && d < minD)
+                                      || (!IsBlank(maxD) && d > maxD)
+                                      || (cmpRangeCalendar.DisableWeekends && Weekday(d, StartOfWeek.Monday) > 5)
+                                      || d in cmpRangeCalendar.BlockedDates.BlockedDate
+                              }
+                          )
+                      )
+                  )
+              )
+            X: =8
+            Y: =84
+            Width: =348
+            Height: =288
+            WrapCount: =7
+            TemplateSize: =48
+            TemplatePadding: =1
+            ShowScrollbar: =false
+          Children:
+            - rcDay:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =Day(ThisItem.CalDate)
+                  Width: =Parent.TemplateWidth
+                  Height: =Parent.TemplateHeight
+                  Size: =12
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Tooltip: =Text(ThisItem.CalDate, "dddd d mmmm yyyy")
+                  DisplayMode: =If(ThisItem.IsDisabled, DisplayMode.Disabled, DisplayMode.Edit)
+                  # Today gets a ring, whatever else is going on
+                  BorderThickness: =If(ThisItem.IsToday, 2, 0)
+                  BorderColor: =cmpRangeCalendar.AccentColor
+                  Fill: |-
+                    =With(
+                        { s: _start, e: Coalesce(_end, _start), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) && (d = s || d = e), cmpRangeCalendar.AccentColor,               // start / end
+                            !IsBlank(s) && d > s && d < e, ColorFade(cmpRangeCalendar.AccentColor, 0.88), // in between
+                            RGBA(0, 0, 0, 0)
+                        )
+                    )
+                  HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.75)
+                  PressedFill: =ColorFade(cmpRangeCalendar.AccentColor, -0.25)
+                  DisabledFill: =RGBA(0, 0, 0, 0)
+                  Color: |-
+                    =With(
+                        { s: _start, e: Coalesce(_end, _start), d: ThisItem.CalDate },
+                        If(
+                            !IsBlank(s) && (d = s || d = e), RGBA(255, 255, 255, 1),
+                            !ThisItem.InMonth, RGBA(174, 183, 189, 1),
+                            RGBA(33, 43, 50, 1)
+                        )
+                    )
+                  HoverColor: =RGBA(33, 43, 50, 1)
+                  DisabledColor: =RGBA(200, 206, 210, 1)
+                  FontWeight: =If(ThisItem.IsToday, FontWeight.Bold, FontWeight.Normal)
+                  # One rule: if this click can't finish a valid range, it starts a new one.
+                  OnSelect: |-
+                    =With(
+                        { d: ThisItem.CalDate },
+                        If(
+                            // Single-day mode: every click is a complete selection
+                            !cmpRangeCalendar.AllowRange,
+                                Set(_start, d); Set(_end, d),
+                            // Start a new selection when...
+                            IsBlank(_start)                       // nothing picked yet
+                                || !IsBlank(_end)                 // a range is already complete
+                                || d < _start                     // clicked before the start
+                                || (cmpRangeCalendar.MaxDays > 0  // range would be too long
+                                    && DateDiff(_start, d, TimeUnit.Days) + 1 > cmpRangeCalendar.MaxDays)
+                                || CountRows(                     // range would cross a blocked day
+                                       Filter(cmpRangeCalendar.BlockedDates, BlockedDate > _start && BlockedDate < d)
+                                   ) > 0,
+                                Set(_start, d); Set(_end, Blank()),
+                            // ...otherwise finish it (same day = one-day selection)
+                            Set(_end, d)
+                        )
+                    )
+      - rcSummary:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(
+                  IsBlank(_start),
+                  If(cmpRangeCalendar.AllowRange, "Select a start date", "Select a date"),
+                  With(
+                      { e: Coalesce(_end, _start), n: DateDiff(_start, Coalesce(_end, _start), TimeUnit.Days) + 1 },
+                      Text(_start, "ddd d mmm") &
+                      If(e <> _start, " – " & Text(e, "ddd d mmm"), "") &
+                      "  ·  " & n & If(n = 1, " day", " days") &
+                      If(IsBlank(_end), "  (pick an end date)", "")
+                  )
+              )
+            X: =12
+            Y: =380
+            Width: =268
+            Height: =40
+            Size: =11
+            Color: =RGBA(33, 43, 50, 1)
+      - rcClear:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="Clear"
+            X: =288
+            Y: =384
+            Width: =64
+            Height: =32
+            Size: =11
+            Fill: =RGBA(0, 0, 0, 0)
+            Color: =cmpRangeCalendar.AccentColor
+            BorderColor: =cmpRangeCalendar.AccentColor
+            BorderThickness: =1
+            HoverFill: =ColorFade(cmpRangeCalendar.AccentColor, 0.88)
+            HoverColor: =cmpRangeCalendar.AccentColor
+            DisplayMode: =If(IsBlank(_start), DisplayMode.Disabled, DisplayMode.Edit)
+            OnSelect: =Set(_start, Blank()); Set(_end, Blank())
