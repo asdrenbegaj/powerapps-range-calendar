@@ -7,7 +7,7 @@ and latest dates, blocked dates, weekends and a maximum length.
 It's the booking calendar from our Asset Booking app, rebuilt as a reusable component so
 other teams can use it.
 
-**[Live demo and walkthrough →](https://asdrenebagj.github.io/powerapps-range-calendar/)**
+**[Live demo and walkthrough →](https://asdrenbegaj.github.io/powerapps-range-calendar/)**
 
 ## Get it
 
